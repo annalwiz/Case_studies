@@ -6,7 +6,7 @@ The goal is to modernize their offering by building a recommendation engine tail
 The Challenge:
 Cold Start: No historical user data is available.
 Specific Audience: The target demographic is 45+, rural, and heavily prefers French-language content (VF).
-Technical Constraint: Must process massive datasets (IMDb/TMDB) on limited resources.
+Technical Constraint: Must process massive datasets (IMDb/TMDB).
 Objectives
 Market Research: Define the "Persona" of the local moviegoer using INSEE/CNC data.
 Data Engineering: Process and filter the 7M+ row IMDb dataset using memory-efficient techniques (chunking).
