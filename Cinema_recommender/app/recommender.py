@@ -4,7 +4,7 @@ import pickle
 import plotly.express as px
 import os
 
-# 1) PAGE CONFIGURATION
+# 1. PAGE CONFIGURATION 
 st.set_page_config(
     page_title="Les Toiles de la Creuse",
     page_icon="🎬",
@@ -12,46 +12,47 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 2) LOAD DATA & MODELS (Cached for performance) 
+# 2. LOAD DATA & MODELS 
 @st.cache_resource
 def load_data():
-    # Use os.path.join for safety across Mac/Windows
-    data_path = "" 
+    # Get the specific folder where this script (app.py) lives
+    app_folder = os.path.dirname(os.path.abspath(__file__))
     
-    # If running locally from the 'app' folder, adjust path
-    if not os.path.exists(data_path):
-        data_path = 'data' 
+    # Debug: Print the path to the terminal so you can see where it is looking
+    print(f"📂 Looking for files in: {app_folder}")
 
     try:
-        movies = pickle.load(open(os.path.join(data_path, 'movie_list.pkl'), 'rb'))
-        cosine_sim = pickle.load(open(os.path.join(data_path, 'count_matrix.pkl'), 'rb'))
-        model_knn = pickle.load(open(os.path.join(data_path, 'knn_model.pkl'), 'rb'))
+        # Load files directly from the app_folder
+        movies = pickle.load(open(os.path.join(app_folder, 'movie_list.pkl'), 'rb'))
+        cosine_sim = pickle.load(open(os.path.join(app_folder, 'count_matrix.pkl'), 'rb'))
+        model_knn = pickle.load(open(os.path.join(app_folder, 'knn_model.pkl'), 'rb'))
         return movies, cosine_sim, model_knn
+        
     except FileNotFoundError:
-        st.error("❌ Error: Pickle files not found. Run Notebook 03 first!")
+        st.error(f"❌ Error: Files not found in {app_folder}")
+        st.warning("Please check that movie_list.pkl, count_matrix.pkl, and knn_model.pkl are in the same folder as app.py.")
         return None, None, None
 
-df_movies, count_matrix, model_knn = load_data()
+movies, count_matrix, model_knn = load_data()
 
-if df_movies is not None:
+if movies is not None:
     
     # --- 3. SIDEBAR FILTERS (Global) ---
     st.sidebar.image("https://cdn-icons-png.flaticon.com/512/2503/2503508.png", width=100)
     st.sidebar.title("Cinema Controls")
     
     # Year Filter
-    min_year = int(df_movies['year'].min())
-    max_year = int(df_movies['year'].max())
+    min_year = int(movies['year'].min())
+    max_year = int(movies['year'].max())
     year_range = st.sidebar.slider("📅 Release Year", min_year, max_year, (1980, 2020))
     
     # Language Filter (The "Creuse" Requirement)
-    languages = st.sidebar.multiselect("🗣️ Language", df_movies['detected_language'].unique(), default=['fr'])
+    languages = st.sidebar.multiselect("🗣️ Language", movies['detected_language'].unique(), default=['fr'])
 
     # Apply Filters to the Dataframe (for Dashboard only)
-    filtered_df = df_movies[
-        (df_movies['year'] >= year_range[0]) & 
-        (df_movies['year'] <= year_range[1])
-    ]
+    filtered_df = movies[
+        (movies['year'] >= year_range[0]) & 
+        (movies['year'] <= year_range[1]) ]
     if languages:
         filtered_df = filtered_df[filtered_df['detected_language'].isin(languages)]
 
@@ -108,14 +109,14 @@ if df_movies is not None:
 
         # 1. Search Box
         # Create a list of titles for the dropdown
-        movie_titles = df_movies['primaryTitle'].values
+        movie_titles = movies['primaryTitle'].values
         selected_movie = st.selectbox("Type or Select a Movie:", movie_titles, index=None, placeholder="Ex: Anatomy of a Fall")
 
         if selected_movie:
             # 2. Find the Index
             try:
                 # Get index of the selected movie
-                idx = df_movies[df_movies['primaryTitle'] == selected_movie].index[0]
+                idx = movies[movies['primaryTitle'] == selected_movie].index[0]
                 
                 # 3. Run the "Brain" (Nearest Neighbors)
                 # We ask for 6 neighbors because the first one is always the movie itself
@@ -129,7 +130,7 @@ if df_movies is not None:
                 for i, col in enumerate(cols):
                     if i + 1 < len(indices[0]):
                         movie_idx = indices[0][i+1] # Get the neighbor index
-                        row = df_movies.iloc[movie_idx]
+                        row = movies.iloc[movie_idx]
                         
                         with col:
                             # Display Title
